@@ -234,65 +234,28 @@ static NSString* const EventCellsKey = @"EventCellsKey";
 
 - (NSArray*)adjustLayoutForOverlappingCells:(NSArray*)attributes inSection:(NSUInteger)section
 {
-	const CGFloat kOverlapOffset = 4.;
-	
-	// sort layout attributes by frame y-position
-	NSArray *adjustedAttributes = [attributes sortedArrayUsingComparator:^NSComparisonResult(MGCEventCellLayoutAttributes *att1, MGCEventCellLayoutAttributes *att2) {
-		if (att1.frame.origin.y > att2.frame.origin.y) {
-			 return NSOrderedDescending;
-		}
-		else if (att1.frame.origin.y < att2.frame.origin.y) {
-			 return NSOrderedAscending;
-		}
-		return NSOrderedSame;
-	}];
-	
-	
-	for (NSUInteger i = 0; i < adjustedAttributes.count; i++) {
-		MGCEventCellLayoutAttributes *attribs1 = [adjustedAttributes objectAtIndex:i];
-		
-		NSMutableArray *layoutGroup = [NSMutableArray array];
-		MGCEventCellLayoutAttributes *covered = nil;
-		[layoutGroup addObject:attribs1];
-		
-		// iterate previous frames (i.e with highest or equal y-pos)
-		for (NSInteger j = i - 1; j >= 0; j--) {
-			
-			MGCEventCellLayoutAttributes *attribs2 = [adjustedAttributes objectAtIndex:j];
-			if (CGRectIntersectsRect(attribs1.frame, attribs2.frame)) {
-				CGFloat visibleHeight = fabs(attribs1.frame.origin.y - attribs2.frame.origin.y);
-				
-				if (visibleHeight > self.minimumVisibleHeight) {
-					covered = attribs2;
-					covered.visibleHeight = visibleHeight;
-                    attribs1.zIndex = attribs2.zIndex + 1;
-					break;
-				}
-				else {
-					[layoutGroup addObject:attribs2];
-				}
-			}
-		}
-		
-		// now, distribute elements in layout group
-		CGFloat groupOffset = 0;
-		if (covered) {
-			CGFloat sectionXPos = section * self.dayColumnSize.width;
-			groupOffset += covered.frame.origin.x - sectionXPos + kOverlapOffset;
-		}
-		
-		CGFloat totalWidth = (self.dayColumnSize.width - 1.) - groupOffset;
-		CGFloat colWidth = totalWidth / layoutGroup.count;
-		
-		CGFloat x = section * self.dayColumnSize.width + groupOffset;
-		
-		for (MGCEventCellLayoutAttributes* attribs in [layoutGroup reverseObjectEnumerator]) {
-			attribs.frame = MGCAlignedRectMake(x, attribs.frame.origin.y, colWidth, attribs.frame.size.height);
-			x += colWidth;
-		}
-	}
-	
-	return adjustedAttributes;
+    // sort layout attributes by frame y-position
+    // Sort it by starting time, and then by ending time.
+    NSArray *adjustedAttributes = [attributes sortedArrayUsingComparator:^NSComparisonResult(MGCEventCellLayoutAttributes *att1, MGCEventCellLayoutAttributes *att2) {
+        if (att1.frame.origin.y > att2.frame.origin.y) {
+             return NSOrderedDescending;
+        }
+        else if (att1.frame.origin.y < att2.frame.origin.y) {
+             return NSOrderedAscending;
+        }
+        
+        if (att1.frame.origin.y + att1.frame.size.height >
+            att2.frame.origin.y + att2.frame.size.height) {
+            return NSOrderedDescending;
+        }
+        if (att1.frame.origin.y + att1.frame.size.height <
+            att2.frame.origin.y + att2.frame.size.height) {
+            return NSOrderedAscending;
+        }
+        return NSOrderedSame;
+    }];
+    
+    return [self layoutEvents:adjustedAttributes];
 }
 
 #pragma mark - END: Here we changed the logic
