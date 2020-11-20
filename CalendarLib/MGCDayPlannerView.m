@@ -69,8 +69,9 @@ static NSString* const MoreEventsViewReuseIdentifier = @"MoreEventsViewReuseIden
 static const NSUInteger kDaysLoadingStep = 2;
 
 // minimum and maximum height of a one-hour time slot
-static const CGFloat kMinHourSlotHeight = 20.;
-static const CGFloat kMaxHourSlotHeight = 150.;
+static const CGFloat kMinHourSlotHeight = 18.0;
+// MD: - Here we changed the logic. We need to show bookable hours in whole view
+static const CGFloat kMaxHourSlotHeight = 15000.;
 
 
 @interface MGCDayColumnViewFlowLayout : UICollectionViewFlowLayout
@@ -1307,7 +1308,9 @@ static const CGFloat kMaxHourSlotHeight = 150.;
 		size.height = self.interactiveCellTimedEventHeight;
 			
 		// constraint position
-		ptEventsView.y -= self.interactiveCellTouchPoint.y;
+		// Here we changed the logic
+//      ptEventsView.y -= self.interactiveCellTouchPoint.y;
+        ptEventsView.y -= (NSInteger)(ptEventsView.y - self.eventsViewInnerMargin) % (NSInteger)([MGCTimeRowsView defaultSlotHeight:self.timeRowsView.slotSize]);
 		ptEventsView.y = fmaxf(ptEventsView.y, self.eventsViewInnerMargin);
 		ptEventsView.y = fminf(ptEventsView.y, self.timedEventsView.contentSize.height - self.eventsViewInnerMargin);
 			
@@ -1328,6 +1331,7 @@ static const CGFloat kMaxHourSlotHeight = 150.;
 	cellFrame.origin = origin;
 	cellFrame.size = size;
 	[UIView animateWithDuration:animationDur delay:0 options:/*UIViewAnimationOptionBeginFromCurrentState|*/UIViewAnimationOptionCurveEaseIn animations:^{
+        // Here we changed the logic
 		self.interactiveCell.frame = cellFrame;
 	} completion:^(BOOL finished) {
 		if (didTransition) {
@@ -1815,7 +1819,7 @@ static const CGFloat kMaxHourSlotHeight = 150.;
 	else if (collectionView == self.dayColumnsView) {
 		return [self dayColumnCellAtIndexPath:indexPath];
 	}
-	return nil;
+    return [UICollectionViewCell new];
 }
 
 ///// test
@@ -1845,6 +1849,8 @@ static const CGFloat kMaxHourSlotHeight = 150.;
         
         return view;
     }
+    NSAssert(false, @"- (UICollectionReusableView*)collectionView:(UICollectionView*)collectionView viewForSupplementaryElementOfKind:(NSString*)kind atIndexPath:(NSIndexPath*)indexPath: should not be happen");
+    return [UICollectionReusableView new];
 }
 
 //////

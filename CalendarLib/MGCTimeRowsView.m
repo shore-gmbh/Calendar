@@ -59,6 +59,9 @@
 		_hourRange = NSMakeRange(0, 24);
 		
 		self.showsCurrentTime = YES;
+        
+        // Here we changed the logic
+        _slotSize = 30; // calendar default slot height is 30 minutes
 	}
 	return self;
 }
@@ -77,13 +80,18 @@
 
 - (BOOL)showsHalfHourLines
 {
-	return self.hourSlotHeight > 100;
+//    return self.hourSlotHeight > 100;
+    
+    // Here we changed the logic
+    return YES;
+//    return self.hourSlotHeight >= [MGCTimeRowsView defaultSlotHeight] * 2;
 }
 
 - (void)setHourRange:(NSRange)hourRange
 {
     NSAssert(hourRange.length >= 1 && NSMaxRange(hourRange) <= 24, @"Invalid hour range %@", NSStringFromRange(hourRange));
     _hourRange = hourRange;
+    [self setNeedsDisplay];
 }
 
 - (void)setTimeMark:(NSTimeInterval)timeMark
@@ -207,24 +215,46 @@
         CGContextSetLineWidth(context, lineWidth);
 		CGContextSetLineDash(context, 0, NULL, 0);
         CGContextMoveToPoint(context, self.timeColumnWidth, y);
-		CGContextAddLineToPoint(context, self.timeColumnWidth + rect.size.width, y);
-		CGContextStrokePath(context);
-		
-		if (self.showsHalfHourLines && i < NSMaxRange(self.hourRange)) {
-			y = MGCAlignedFloat(y + self.hourSlotHeight/2.) - lineWidth * .5;
-			CGContextSetLineDash(context, 0, dash, 2);
-			CGContextMoveToPoint(context, self.timeColumnWidth, y),
-			CGContextAddLineToPoint(context, self.timeColumnWidth + rect.size.width, y);
-			CGContextStrokePath(context);
-		}
-		
-		// don't draw time mark if it intersects any other mark
-		drawTimeMark &= !CGRectIntersectsRect(r, rectTimeMark);
-	}
+        CGContextAddLineToPoint(context, self.timeColumnWidth + rect.size.width, y);
+        CGContextStrokePath(context);
+        
+        if (self.showsHalfHourLines && i < NSMaxRange(self.hourRange)) {
+            // Here we changed the logic
+            if (self.slotSize > 0 && self.slotSize <= 60) {
+                NSInteger subSlotsCount = 60 / self.slotSize;
+                CGFloat minSlotHeight = self.hourSlotHeight / subSlotsCount;
+                for (int i = 0; i < subSlotsCount-1; i++) {
+                    y = MGCAlignedFloat(y + minSlotHeight) - lineWidth * .5;
+                    CGContextSetLineDash(context, 0, dash, 2);
+                    CGContextMoveToPoint(context, self.timeColumnWidth, y);
+                    CGContextAddLineToPoint(context, self.timeColumnWidth + rect.size.width, y);
+                    CGContextStrokePath(context);
+                }
+            } else {
+//                NSAssert(NO, @"slot size is wrong");
+                y = MGCAlignedFloat(y + self.hourSlotHeight / 2.) - lineWidth * .5;
+                CGContextSetLineDash(context, 0, dash, 2);
+                CGContextMoveToPoint(context, self.timeColumnWidth, y);
+                CGContextAddLineToPoint(context, self.timeColumnWidth + rect.size.width, y);
+                CGContextStrokePath(context);
+            }
+        }
+        
+        // don't draw time mark if it intersects any other mark
+        drawTimeMark &= !CGRectIntersectsRect(r, rectTimeMark);
+    }
 
 	if (drawTimeMark) {
         [floatingMarkAttrStr drawInRect:rectTimeMark];
 	}
+}
+
+// Here we changed the logic
++ (CGFloat)defaultSlotHeight:(NSInteger)slotSize {
+    if (slotSize >= 10) {
+        return 32;
+    }
+    return 18.0;
 }
 
 @end

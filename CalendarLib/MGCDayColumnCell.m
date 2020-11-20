@@ -31,7 +31,7 @@
 #import "MGCDayColumnCell.h"
 
 
-static const CGFloat dotSize = 4;
+static const CGFloat dotSize = 0;
 
 
 @interface MGCDayColumnCell ()
@@ -103,7 +103,7 @@ static const CGFloat dotSize = 4;
 {
 	[super layoutSubviews];
 	
-	static CGFloat kSpace = 2;
+	static CGFloat kSpace = 0;
 
 	[CATransaction begin];
 	[CATransaction setDisableActions:YES];

@@ -52,6 +52,10 @@
 @property (nonatomic) UIColor *currentTimeColor;		// color used for current time mark and line
 @property (nonatomic, weak) id<MGCTimeRowsViewDelegate> delegate;
 
+// Here we changed the logic
+@property (nonatomic, assign) NSInteger slotSize;        // accuracy duration of calendar
++ (CGFloat)defaultSlotHeight:(NSInteger)slotSize;
+
 @end
 
 

@@ -148,6 +148,90 @@ static NSString* const EventCellsKey = @"EventCellsKey";
     return sectionAttribs;
 }
 
+#pragma mark - START: Here we changed the logic. We are going to show appointment cells like we show in web, but not like native Calendar application
+- (NSArray *)layoutEvents:(NSArray <MGCEventCellLayoutAttributes *> *)events {
+    NSMutableArray *tempArray = [NSMutableArray new];
+    
+    NSMutableArray<NSMutableArray<MGCEventCellLayoutAttributes *> *> *columns = [NSMutableArray new];
+    CGFloat lastEventEnding = -1;
+    for (MGCEventCellLayoutAttributes *ev in events) {
+        if (ev.frame.origin.y >= lastEventEnding) {
+            [self packEvents:columns];
+            
+            for (NSArray<MGCEventCellLayoutAttributes *> *col in columns) {
+                [tempArray addObjectsFromArray:col];
+            }
+            
+            [columns removeAllObjects];
+            lastEventEnding = -1;
+        }
+        BOOL placed = NO;
+        for (NSMutableArray<MGCEventCellLayoutAttributes *> *col in columns) {
+            MGCEventCellLayoutAttributes *lastCol = col.lastObject;
+            if (!CGRectIntersectsRect(lastCol.frame, ev.frame)) {
+                [col addObject:ev];
+                placed = YES;
+                break;
+            }
+        }
+        if (!placed) {
+            NSMutableArray<MGCEventCellLayoutAttributes *> *newArray = [NSMutableArray new];
+            [newArray addObject:ev];
+            [columns addObject:newArray];
+        }
+        CGFloat end = ev.frame.origin.y + ev.frame.size.height;
+        if (lastEventEnding == -1 || end > lastEventEnding) {
+            lastEventEnding = end;
+        }
+    }
+    if (columns.count > 0) {
+        [self packEvents:columns];
+    }
+    
+    for (NSArray<MGCEventCellLayoutAttributes *> *col in columns) {
+        [tempArray addObjectsFromArray:col];
+    }
+    return tempArray;
+}
+
+- (void)packEvents:(NSArray<NSArray <MGCEventCellLayoutAttributes *> *> *)columns {
+    const CGFloat kOverlapOffset = 1.;
+    
+    NSInteger numColumns = columns.count;
+    NSInteger iColumn = 0;
+    for (NSArray <MGCEventCellLayoutAttributes *> *col in columns) {
+        
+        for (MGCEventCellLayoutAttributes *ev in col) {
+            NSInteger colSpan = [self expandEvent:ev iColumn:iColumn columns:columns];
+            CGRect frame = ev.frame;
+            CGFloat width = (self.dayColumnSize.width / numColumns);
+            frame.origin.x = frame.origin.x + width * iColumn + kOverlapOffset;
+            frame.size.width = width * colSpan - kOverlapOffset * 2;
+            ev.frame = frame;
+        }
+        iColumn++;
+    }
+}
+
+- (NSInteger)expandEvent:(MGCEventCellLayoutAttributes *)ev
+                 iColumn:(NSInteger)iColumn
+                 columns:(NSArray<NSArray <MGCEventCellLayoutAttributes *> *> *)columns {
+    NSInteger colSpan = 1;
+    for (int i = 0; i < columns.count; i++) {
+        if (i <= iColumn) {
+            continue;
+        }
+        NSArray <MGCEventCellLayoutAttributes *> *col = columns[i];
+        for (MGCEventCellLayoutAttributes *ev1 in col) {
+            if (CGRectIntersectsRect(ev1.frame, ev.frame)) {
+                return colSpan;
+            }
+        }
+        colSpan++;
+    }
+    return colSpan;
+}
+
 - (NSArray*)adjustLayoutForOverlappingCells:(NSArray*)attributes inSection:(NSUInteger)section
 {
 	const CGFloat kOverlapOffset = 4.;
@@ -211,6 +295,71 @@ static NSString* const EventCellsKey = @"EventCellsKey";
 	return adjustedAttributes;
 }
 
+#pragma mark - END: Here we changed the logic
+
+//- (NSArray*)adjustLayoutForOverlappingCells:(NSArray*)attributes inSection:(NSUInteger)section
+//{
+//    const CGFloat kOverlapOffset = 4.;
+//
+//    // sort layout attributes by frame y-position
+//    NSArray *adjustedAttributes = [attributes sortedArrayUsingComparator:^NSComparisonResult(MGCEventCellLayoutAttributes *att1, MGCEventCellLayoutAttributes *att2) {
+//        if (att1.frame.origin.y > att2.frame.origin.y) {
+//             return NSOrderedDescending;
+//        }
+//        else if (att1.frame.origin.y < att2.frame.origin.y) {
+//             return NSOrderedAscending;
+//        }
+//        return NSOrderedSame;
+//    }];
+//
+//
+//    for (NSUInteger i = 0; i < adjustedAttributes.count; i++) {
+//        MGCEventCellLayoutAttributes *attribs1 = [adjustedAttributes objectAtIndex:i];
+//
+//        NSMutableArray *layoutGroup = [NSMutableArray array];
+//        MGCEventCellLayoutAttributes *covered = nil;
+//        [layoutGroup addObject:attribs1];
+//
+//        // iterate previous frames (i.e with highest or equal y-pos)
+//        for (NSInteger j = i - 1; j >= 0; j--) {
+//
+//            MGCEventCellLayoutAttributes *attribs2 = [adjustedAttributes objectAtIndex:j];
+//            if (CGRectIntersectsRect(attribs1.frame, attribs2.frame)) {
+//                CGFloat visibleHeight = fabs(attribs1.frame.origin.y - attribs2.frame.origin.y);
+//
+//                if (visibleHeight > self.minimumVisibleHeight) {
+//                    covered = attribs2;
+//                    covered.visibleHeight = visibleHeight;
+//                    attribs1.zIndex = attribs2.zIndex + 1;
+//                    break;
+//                }
+//                else {
+//                    [layoutGroup addObject:attribs2];
+//                }
+//            }
+//        }
+//
+//        // now, distribute elements in layout group
+//        CGFloat groupOffset = 0;
+//        if (covered) {
+//            CGFloat sectionXPos = section * self.dayColumnSize.width;
+//            groupOffset += covered.frame.origin.x - sectionXPos + kOverlapOffset;
+//        }
+//
+//        CGFloat totalWidth = (self.dayColumnSize.width - 1.) - groupOffset;
+//        CGFloat colWidth = totalWidth / layoutGroup.count;
+//
+//        CGFloat x = section * self.dayColumnSize.width + groupOffset;
+//
+//        for (MGCEventCellLayoutAttributes* attribs in [layoutGroup reverseObjectEnumerator]) {
+//            attribs.frame = MGCAlignedRectMake(x, attribs.frame.origin.y, colWidth, attribs.frame.size.height);
+//            x += colWidth;
+//        }
+//    }
+//
+//    return adjustedAttributes;
+//}
+
 #pragma mark - UICollectionViewLayout
 
 + (Class)layoutAttributesClass
@@ -223,7 +372,10 @@ static NSString* const EventCellsKey = @"EventCellsKey";
 	//NSLog(@"layoutAttributesForItemAtIndexPath %@", indexPath);
 	
 	NSArray *attribs = [[self layoutAttributesForSection:indexPath.section] objectForKey:EventCellsKey];
-	return [attribs objectAtIndex:indexPath.item];
+    if (attribs.count > indexPath.item) {   // we change here logic, we added checking
+        return [attribs objectAtIndex:indexPath.item];
+    }
+    return nil;
 }
 
 - (UICollectionViewLayoutAttributes*)layoutAttributesForSupplementaryViewOfKind:(NSString *)elementKind atIndexPath:(NSIndexPath *)indexPath
