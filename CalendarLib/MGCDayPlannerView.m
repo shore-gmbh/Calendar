@@ -66,7 +66,8 @@ static NSString* const MoreEventsViewReuseIdentifier = @"MoreEventsViewReuseIden
 
 // we only load in the collection views (2 * kDaysLoadingStep + 1) pages of (numberOfVisibleDays) days each at a time.
 // this value can be tweaked for performance or smoother scrolling (between 2 and 4 seems reasonable)
-static const NSUInteger kDaysLoadingStep = 2;
+//static const NSUInteger kDaysLoadingStep = 2;
+static const NSUInteger kDaysLoadingStep = 1;   // MD: - Here we changed the logic. We will fetch small amount of days to avoid ui performance issue
 
 // minimum and maximum height of a one-hour time slot
 static const CGFloat kMinHourSlotHeight = 18.0;
@@ -1459,13 +1460,16 @@ static const CGFloat kMaxHourSlotHeight = 15000.;
 		dispatch_async(dispatch_get_main_queue(), ^{ [self setupSubviews]; });
 	}
 	
-	[self.loadedDaysRange enumerateDaysWithCalendar:self.calendar usingBlock:^(NSDate *date, BOOL *stop) {
-		[self refreshEventMarkForColumnAtDate:date];
-	}];
+    // MD: - Here we changed the logic. We don't show marks on dates
+//	[self.loadedDaysRange enumerateDaysWithCalendar:self.calendar usingBlock:^(NSDate *date, BOOL *stop) {
+//		[self refreshEventMarkForColumnAtDate:date];
+//	}];
 }
 
 - (void)refreshEventMarkForColumnAtDate:(NSDate*)date
 {
+    // MD: - Here we changed the logic. We don't show marks on dates
+    return;
 	NSInteger section = [self dayOffsetFromDate:date];
 	NSIndexPath *path = [NSIndexPath indexPathForItem:0 inSection:section];
 	MGCDayColumnCell *cell = (MGCDayColumnCell*)[self.dayColumnsView cellForItemAtIndexPath:path];
@@ -1496,7 +1500,8 @@ static const CGFloat kMaxHourSlotHeight = 15000.;
 		}
 		[self.timedEventsView reloadData];
 		
-		[self refreshEventMarkForColumnAtDate:date];
+        // MD: - Here we changed the logic. We don't show marks on dates
+//		[self refreshEventMarkForColumnAtDate:date];
 	}
 }
 
